@@ -1,6 +1,8 @@
-from mmdet.core import eval_map, eval_recalls
+from mmdet.core import eval_map, eval_recalls, get_classes
 from .builder import DATASETS
 from .xml_style import XMLDataset
+
+import mmcv
 
 
 @DATASETS.register_module()
@@ -63,7 +65,7 @@ class VOCDataset(XMLDataset):
                 ds_name = 'voc07'
             else:
                 ds_name = self.CLASSES
-            mean_ap, _ = eval_map(
+            mean_ap, eval_results_list = eval_map(
                 results,
                 annotations,
                 scale_ranges=None,
@@ -71,6 +73,12 @@ class VOCDataset(XMLDataset):
                 dataset=ds_name,
                 logger=logger)
             eval_results['mAP'] = mean_ap
+            if mmcv.is_str(ds_name):
+                label_names = get_classes(ds_name)
+            else:
+                label_names = ds_name
+            for i, name in enumerate(label_names):
+                eval_results[name] = eval_results_list[i]
         elif metric == 'recall':
             gt_bboxes = [ann['bboxes'] for ann in annotations]
             if isinstance(iou_thr, float):
